@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChatKeep — WhatsApp export, kept here</title>
+    <meta
+      name="description"
+      content="Drop a WhatsApp Export Chat file. Get a searchable HTML archive and CSV. Nothing is uploaded."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1c1917;
+        --muted: #57534e;
+        --line: #e7e5e4;
+        --bg: #fafaf9;
+        --card: #ffffff;
+        --accent: #0f766e;
+        --warn: #9a3412;
+        --hit: #fef3c7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      main { max-width: 44rem; margin: 0 auto; padding: 4rem 1.5rem 5rem; }
+      h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 0.75rem; }
+      h2 { font-size: 1.05rem; margin: 2rem 0 0.5rem; }
+      .kicker { color: var(--muted); font-size: 0.875rem; font-weight: 600; margin: 0 0 0.75rem; }
+      .lede { color: var(--muted); font-size: 1.125rem; max-width: 36rem; }
+      .drop {
+        margin: 2rem 0 1rem;
+        border: 1px dashed #d6d3d1;
+        border-radius: 1rem;
+        background: var(--card);
+        padding: 2rem 1.25rem;
+        text-align: center;
+      }
+      .drop.over { border-color: var(--accent); background: #f0fdfa; }
+      button {
+        appearance: none;
+        border: 0;
+        background: var(--ink);
+        color: white;
+        border-radius: 0.6rem;
+        padding: 0.6rem 1rem;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary { background: white; color: var(--ink); border: 1px solid var(--line); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .meta { color: var(--muted); font-size: 0.875rem; }
+      .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; justify-content: center; }
+      .counts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin: 1rem 0;
+      }
+      .counts div {
+        border: 1px solid var(--line);
+        border-radius: 0.75rem;
+        padding: 0.7rem;
+        background: var(--card);
+      }
+      .counts b { display: block; font-size: 1.25rem; }
+      .counts span { font-size: 0.75rem; color: var(--muted); }
+      input[type="search"] {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 0.75rem;
+        padding: 0.7rem 0.85rem;
+        font: inherit;
+        margin: 0.5rem 0 1rem;
+      }
+      .log {
+        max-height: 22rem;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 0.75rem;
+        background: var(--card);
+        padding: 0.5rem 0;
+      }
+      .log article {
+        padding: 0.55rem 1rem;
+        border-bottom: 1px solid var(--line);
+      }
+      .log article:last-child { border-bottom: 0; }
+      .log .who { font-weight: 600; font-size: 0.85rem; }
+      .log .when { color: var(--muted); font-size: 0.75rem; margin-left: 0.4rem; }
+      .log p { margin: 0.15rem 0 0; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; }
+      mark { background: var(--hit); padding: 0 0.1em; }
+      .cards { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
+      @media (min-width: 640px) { .cards { grid-template-columns: 1fr 1fr 1fr; } }
+      .cards article {
+        border: 1px solid var(--line);
+        border-radius: 0.9rem;
+        padding: 1rem;
+        background: var(--card);
+      }
+      .cards h2 { font-size: 1rem; margin: 0 0 0.4rem; }
+      .cards p { margin: 0; color: var(--muted); font-size: 0.875rem; }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+      a { color: inherit; }
+      .warn { color: var(--warn); font-size: 0.875rem; }
+      input[type="file"] { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">ChatKeep</p>
+      <h1>You already said the problem out loud.</h1>
+      <p class="lede">
+        “I am about to lose again years of chat history on WhatsApp.” Export the
+        chat from WhatsApp, drop the <code>.txt</code> or zip here, keep a
+        searchable copy. Nothing is uploaded.
+      </p>
+
+      <div class="drop" id="drop">
+        <p><strong>Drop a WhatsApp Export Chat .txt or .zip</strong></p>
+        <p class="meta">15 MB cap. Files stay on this device. Media files are listed, not re-hosted.</p>
+        <div class="row">
+          <button type="button" id="pick">Choose file</button>
+          <button type="button" class="secondary" id="sample">Load sample</button>
+        </div>
+        <input id="file" type="file" accept=".txt,.zip,text/plain,application/zip" />
+      </div>
+
+      <p class="meta" id="status">Waiting for an export.</p>
+      <p class="warn" id="error" hidden></p>
+
+      <div class="counts" id="counts" hidden>
+        <div><b id="c-msg">0</b><span>messages</span></div>
+        <div><b id="c-people">0</b><span>people</span></div>
+        <div><b id="c-days">0</b><span>days</span></div>
+      </div>
+
+      <input type="search" id="q" placeholder="Search this chat…" hidden />
+      <div class="log" id="log" hidden></div>
+
+      <div class="row" style="justify-content: flex-start;">
+        <button type="button" id="html" disabled>Download HTML archive</button>
+        <button type="button" class="secondary" id="csv" disabled>Download CSV</button>
+      </div>
+
+      <section class="cards" style="margin-top: 2.5rem;">
+        <article>
+          <h2>The declaration is the qualifier</h2>
+          <p>If you export a chat before switching phones, you already know you need a copy that is not WhatsApp.</p>
+        </article>
+        <article>
+          <h2>The archive is the product</h2>
+          <p>One HTML file you can search, plus a CSV. Open it years later. No account required then either.</p>
+        </article>
+        <article>
+          <h2>Built for the reply</h2>
+          <p>Someone posted the pain. This page is the answer. Try it in this tab, then send the URL back.</p>
+        </article>
+      </section>
+
+      <section>
+        <h2>Who this is for</h2>
+        <ul class="meta">
+          <li>WhatsApp → Chat → Export chat → without media (or zip with media names)</li>
+          <li>A thread you may lose on a new phone</li>
+          <li>A record you want as a file, not a cloud backup</li>
+        </ul>
+        <p class="warn">Only works on WhatsApp’s own export text. Not a backup restore, not a phone dump.</p>
+      </section>
+
+      <footer>
+        <a href="https://github.com/davidlifschitz/gtm-chatkeep">Source</a>
+        · Ask:
+        <a href="https://www.reddit.com/r/whatsapp/comments/1vozoti/i_am_about_to_lose_again_years_of_chat_history_on/">r/whatsapp chat history</a>
+        · 15 MB. No account. No cloud copy.
+      </footer>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
