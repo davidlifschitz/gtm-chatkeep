@@ -37,7 +37,9 @@ export function parseExport(text) {
   const raw = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   const lines = raw.split("\n");
   const messages = [];
-  for (const line of lines) {
+  for (let line of lines) {
+    // iOS prefixes attachment/deleted lines with U+200E and uses U+202F before AM/PM.
+    line = line.replace(/^[\u200e\u200f]+/, "").replace(/^(\[?[^\]]{0,40}?)\u202f/, "$1 ");
     if (!line.trim()) continue;
     const ios = line.match(IOS);
     const and = ios ? null : line.match(ANDROID);
@@ -47,7 +49,7 @@ export function parseExport(text) {
         date: m[1],
         time: m[2],
         author: (m[3] || "system").trim(),
-        body: m[4] || "",
+        body: (m[4] || "").replace(/^[\u200e\u200f]+/, ""),
       });
     } else if (messages.length) {
       messages[messages.length - 1].body += "\n" + line;
