@@ -145,10 +145,15 @@ function paintLog(query) {
   const slice = shown.slice(0, 400);
   els.log.innerHTML = slice
     .map((m) => {
+      // Match on the raw text and escape each piece, so a query like "amp" can't
+      // land inside an &amp; entity and "&" or "<" still highlight.
       let body = escapeHtml(m.body);
       if (n) {
         const re = new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-        body = body.replace(re, (x) => `<mark>${x}</mark>`);
+        body = m.body
+          .split(new RegExp(`(${re.source})`, "gi"))
+          .map((part, i) => (i % 2 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part)))
+          .join("");
       }
       return `<article><div><span class="who">${escapeHtml(m.author)}</span><span class="when">${escapeHtml(m.date)} ${escapeHtml(m.time)}</span></div><p>${body}</p></article>`;
     })
