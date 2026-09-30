@@ -64,7 +64,10 @@ export function parseExport(text) {
 }
 
 function csvEscape(s) {
-  const t = String(s).replaceAll('"', '""');
+  let t = String(s);
+  // A leading = + - @ would run as a formula when the CSV opens in a spreadsheet.
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;
+  t = t.replaceAll('"', '""');
   return /[",\n]/.test(t) ? `"${t}"` : t;
 }
 
@@ -185,10 +188,15 @@ async function ingest(file) {
     return;
   }
   let text;
-  if (/\.zip$/i.test(file.name) || file.type === "application/zip") {
-    text = await fromZip(file);
-  } else {
-    text = await readTextFile(file);
+  try {
+    if (/\.zip$/i.test(file.name) || file.type === "application/zip") {
+      text = await fromZip(file);
+    } else {
+      text = await readTextFile(file);
+    }
+  } catch (e) {
+    setError(/No \.txt/.test(e.message) ? e.message : `Couldn't read ${file.name}. Is it a WhatsApp export zip or .txt?`);
+    return;
   }
   const messages = parseExport(text);
   if (!messages.length) {
